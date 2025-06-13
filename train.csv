@@ -1,4 +1,4 @@
-vid_path,id_label,label,category
+filename,id_label,label,category
 clips\20\15.MOV,20,ONE,NUMBER
 clips\55\2.MOV,55,DAUGHTER,FAMILY
 clips\15\19.MOV,15,YES,SURVIVAL
