@@ -1,0 +1,3 @@
+ffmpeg
+ibsm6
+libxext6
