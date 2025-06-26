@@ -62,7 +62,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 model = load_model(device=device)
 
 # --- UI ---
-st.title("Filipino Hand-Sign GRU Demo")
+st.title("Filipino Hand-Sign IV3-GRU Demo")
 st.write("Upload a short video (single sign) and see which of the three signs it predicts.")
 
 uploaded = st.file_uploader("Choose a video file", type=["mp4","mov","avi"])

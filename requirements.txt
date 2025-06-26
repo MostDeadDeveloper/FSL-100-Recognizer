@@ -1,4 +1,4 @@
-torch
+torch==2.7.1
 opencv-python
-mediapipe
+mediapipe==0.10.21
 pandas
