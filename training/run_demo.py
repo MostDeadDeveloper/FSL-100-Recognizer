@@ -52,7 +52,7 @@ def extract_landmarks(video_path, seq_length=50):
 
 # --- Load model once ---
 @st.cache(allow_output_mutation=True)
-def load_model(path="gru_hand_sign_model.pth", device="cpu"):
+def load_model(path="training/gru_hand_sign_model.pth", device="cpu"):
     model = GRUClassifier()
     model.load_state_dict(torch.load(path, map_location=device))
     model.to(device).eval()
