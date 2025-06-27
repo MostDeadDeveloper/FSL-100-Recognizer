@@ -106,6 +106,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import mediapipe as mp
+import torchvision.models as models
 
 # --------------------
 # Dataset Definition (sequence of landmarks)  # CHANGE
@@ -166,24 +167,25 @@ class HandSignDataset(Dataset):  # CHANGE: renamed class
             seq = self.transform(seq)
         return seq, label  # CHANGE
 
-# --------------------
-# Model Definition: GRU Classifier  # CHANGE
-# --------------------
-class GRUClassifier(nn.Module):
+
+class IV3_GRUClasssifier(nn.Module):
     def __init__(self, input_size=63, hidden_size=128, num_layers=2, num_classes=3):  # CHANGE: default num_classes
-        super(GRUClassifier, self).__init__()
+        super(IV3_GRUClasssifier, self).__init__()
+        inception = models.inception_v3(pretrained=True, aux_logits=False)
+        self.embed = nn.Embedding(num_embeddings=10000, embedding_dim=256)
+        self.dropout = nn.Dropout(0.5)
         self.gru = nn.GRU(
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
             batch_first=True,
-            bidirectional=False,  # CHANGE: unidirectional GRU
+            bidirectional=False,
         )
         self.classifier = nn.Sequential(
-            nn.Linear(hidden_size, 64),  # CHANGE
-            nn.ReLU(),                     # CHANGE
-            nn.Dropout(0.5),               # CHANGE
-            nn.Linear(64, num_classes)     # CHANGE
+            nn.Linear(hidden_size, 64),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(64, num_classes)
         )
 
     def forward(self, x):
@@ -197,22 +199,22 @@ class GRUClassifier(nn.Module):
 # --------------------
 def train_model(videos_dir, csv_path, num_classes,
                 batch_size=8, lr=1e-3, epochs=20, seq_length=50, device='cuda'):
-    logger.info(f"Executing Training.")  # CHANGE
+    logger.info(f"Executing Training.")
     dataset = HandSignDataset(videos_dir, csv_path, seq_length)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-    logger.info(f"Model and Data Loaded.")  # CHANGE
-    model = GRUClassifier(input_size=63, hidden_size=128, num_layers=2, num_classes=num_classes).to(device)  # CHANGE
+    logger.info(f"Model and Data Loaded.")
+    model = IV3_GRUClasssifier(input_size=63, hidden_size=128, num_layers=2, num_classes=num_classes).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     for epoch in range(1, epochs+1):
         model.train()
         running_loss, correct, total = 0.0, 0, 0
-        for seq, labels in dataloader:  # CHANGE
+        for seq, labels in dataloader:
             seq, labels = seq.to(device), labels.to(device)
             optimizer.zero_grad()
-            outputs = model(seq)  # CHANGE
+            outputs = model(seq)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
@@ -225,28 +227,24 @@ def train_model(videos_dir, csv_path, num_classes,
         epoch_loss = running_loss / total
         epoch_acc = correct / total
         print(f"Epoch {epoch}/{epochs} - Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
-        logger.info(f"Epoch {epoch}/{epochs} - Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")  # CHANGE
-
+        logger.info(f"Epoch {epoch}/{epochs} - Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
     torch.save(model.state_dict(), 'gru_hand_sign_model.pth')
     print("Training complete. Model saved to gru_hand_sign_model.pth")
-    logger.info("Training complete. Model saved to gru_hand_sign_model.pth")  # CHANGE
+    logger.info("Training complete. Model saved to gru_hand_sign_model.pth")
 
-# --------------------
-# Single-Sample Inference (adapted)  # CHANGE
-# --------------------
 def infer_one_sample(videos_dir, csv_path, model_path,
                      sample_idx=0, seq_length=50, device='cuda'):
     dataset = HandSignDataset(videos_dir, csv_path, seq_length)
     seq, true_label = dataset[sample_idx]  # CHANGE
 
-    model = GRUClassifier(input_size=63, hidden_size=128, num_layers=2,
-                          num_classes=max([lbl for _, lbl in dataset.samples])+1).to(device)  # CHANGE
+    model = IV3_GRUClasssifier(input_size=63, hidden_size=128, num_layers=2,
+                          num_classes=max([lbl for _, lbl in dataset.samples])+1).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
 
-    seq = seq.unsqueeze(0).to(device)  # CHANGE
+    seq = seq.unsqueeze(0).to(device)
     with torch.no_grad():
-        outputs = model(seq)  # CHANGE
+        outputs = model(seq)
         probs = torch.softmax(outputs, dim=1)
         pred_label = torch.argmax(probs, dim=1).item()
 
@@ -254,19 +252,17 @@ def infer_one_sample(videos_dir, csv_path, model_path,
     print(f"Expected label: {true_label}")
     print(f"Predicted label: {pred_label}")
     print(f"Probabilities: {probs.cpu().numpy()}")
-    logger.info(f"Sample index: {sample_idx}")  # CHANGE
-    logger.info(f"Expected label: {true_label}")  # CHANGE
-    logger.info(f"Predicted label: {pred_label}")  # CHANGE
-    logger.info(f"Probabilities: {probs.cpu().numpy()}")  # CHANGE
+    logger.info(f"Sample index: {sample_idx}")
+    logger.info(f"Expected label: {true_label}")
+    logger.info(f"Predicted label: {pred_label}")
+    logger.info(f"Probabilities: {probs.cpu().numpy()}") 
 
-# --------------------
-# Example Usage  # CHANGE
-# --------------------
+
 if __name__ == '__main__':
-    VIDEOS_DIR = '../dataset/'  # user path  # CHANGE
-    CSV_PATH = 'spliced_train.csv'  # CHANGE
-    MODEL_PATH = 'gru_hand_sign_model.pth'  # CHANGE
-    NUM_CLASSES = 3  # CHANGE
+    VIDEOS_DIR = '../dataset/'
+    CSV_PATH = 'spliced_train.csv'
+    MODEL_PATH = 'gru_hand_sign_model.pth'
+    NUM_CLASSES = 3
     BATCH_SIZE = 32
     lr_change_based_on_batch_size = 1e-3 * (BATCH_SIZE / 4)
 
@@ -289,10 +285,6 @@ if __name__ == '__main__':
         seq_length=50,
         device='cuda' if torch.cuda.is_available() else 'cpu'
     )
-
-
-# In[ ]:
-
 
 
 
