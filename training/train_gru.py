@@ -262,7 +262,7 @@ if __name__ == '__main__':
     VIDEOS_DIR = '../dataset/'
     CSV_PATH = 'spliced_train.csv'
     MODEL_PATH = 'gru_hand_sign_model.pth'
-    NUM_CLASSES = 3
+    NUM_CLASSES = 120
     BATCH_SIZE = 32
     lr_change_based_on_batch_size = 1e-3 * (BATCH_SIZE / 4)
 
